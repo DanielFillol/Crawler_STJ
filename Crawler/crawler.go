@@ -3,7 +3,6 @@ package Crawler
 import (
 	"errors"
 	"fmt"
-	"github.com/DanielFillol/Crawler_STJ/csv"
 	"github.com/antchfx/htmlquery"
 	"github.com/tebeka/selenium"
 	"golang.org/x/net/html"
@@ -91,7 +90,6 @@ func Craw(driver selenium.WebDriver) ([]CrawElement, error) {
 				crawList = append(crawList, CrawElement{
 					FileName: title,
 					URL:      parseToURL(BASEURL, number, title, EXTENSION),
-					Download: false,
 				})
 			}
 		}
@@ -139,10 +137,7 @@ func getPageSource(driver selenium.WebDriver) (*html.Node, error) {
 // It returns the new WebDriver, updated page index, and any error that may occur during the process.
 func nextPage(driverOld selenium.WebDriver, i int, magic int) (selenium.WebDriver, int, error) {
 	// Close the old WebDriver
-	err := driverOld.Close()
-	if err != nil {
-		return nil, 2, errors.New("error closing old driver on next page, err: " + err.Error())
-	}
+	_ = driverOld.Close()
 
 	// Create a new WebDriver
 	driver, err := SeleniumWebDriver()
@@ -346,7 +341,7 @@ func download(url string, fileName string) error {
 	}
 
 	// Create a new file with the specified fileName
-	file, err := os.Create(csv.FOLDERNAME + "/" + "pdf" + "/" + fileName)
+	file, err := os.Create("Result" + "/" + "pdf" + "/" + fileName)
 	if err != nil {
 		return err
 	}
