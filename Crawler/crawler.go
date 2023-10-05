@@ -6,12 +6,12 @@ import (
 	"github.com/antchfx/htmlquery"
 	"github.com/tebeka/selenium"
 	"golang.org/x/net/html"
-	"io"
-	"net/http"
-	"os"
+	"log"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -323,37 +323,58 @@ func removeSpecialCharacters(text string) string {
 // download a file from the specified URL and saves it with the given fileName.
 // It returns an error if any issues occur during the download.
 func download(url string, fileName string) error {
+	// Open a new WebDriver
+	driver, err := SeleniumWebDriver()
+	if err != nil {
+		return errors.New("error creating WebDriver on download, err: " + err.Error())
+	}
+	defer driver.Close()
+
 	// Send an HTTP GET request to the URL
-	resp, err := http.Get(url)
+	err = driver.Get(url)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Check if the response status code is 404 (Not Found)
-	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("URL %s returned a 404 error", url)
+		return errors.New("error getting the URL on download, err:" + err.Error())
 	}
 
-	// Check if the response status code is not OK (200)
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download %s. Status code: %d", url, resp.StatusCode)
-	}
+	// Wait for the PDF page to load (adjust wait time as needed)
+	time.Sleep(1 * time.Second)
 
-	// Create a new file with the specified fileName
-	file, err := os.Create("Result" + "/" + "pdf" + "/" + fileName)
+	// Simulate keyboard shortcuts to save the page as PDF
+	_, err = driver.ExecuteScript(`window.print();`, nil)
 	if err != nil {
-		return err
+		log.Fatalf("Failed to send printToPDF command: %v", err)
 	}
-	defer file.Close()
 
-	// Copy the content of the HTTP response body to the file
-	_, err = io.Copy(file, resp.Body)
+	// Wait for a few seconds to allow the print dialog to appear
+	time.Sleep(5 * time.Second)
+
+	// Simulate user interaction to select the file save location and confirm
+	err = savePDFUsingKeyboard()
 	if err != nil {
 		return err
 	}
 
 	// Print a message to indicate successful download
 	fmt.Printf("Downloaded: %s\n", fileName)
+
+	return nil
+}
+
+// savePDFUsingKeyboard simulates keyboard interaction to save the PDF
+func savePDFUsingKeyboard() error {
+	// Simulate keyboard shortcuts for saving the PDF (platform-dependent)
+	// These shortcuts might vary based on the operating system and browser version
+	// Below is an example for macOS with Firefox:
+	cmd := exec.Command("osascript", "-e", `
+		tell application "System Events"
+			keystroke "s" using {command down}
+			delay 1
+			keystroke return
+		end tell
+	`)
+	err := cmd.Run()
+	if err != nil {
+		return errors.New("Failed to simulate keyboard interaction: " + err.Error())
+	}
 	return nil
 }
